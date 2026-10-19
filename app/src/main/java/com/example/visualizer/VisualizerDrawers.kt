@@ -27,14 +27,29 @@ object VisualizerDrawers {
         val width = scope.size.width
         val height = scope.size.height
 
-        // 1. حساب طاقة البيس (Bass Energy) لاستخدامها في كل التأثيرات
+        // 1. دمج لون المزاج (Mood Color) مع الألوان الأساسية إذا وجد
+        val activePrimary = if (config.currentMoodColor != null) {
+            config.primaryColor.lerp(config.currentMoodColor!!, 0.6f)
+        } else config.primaryColor
+
+        val activeSecondary = if (config.currentMoodColor != null) {
+            config.secondaryColor.lerp(config.currentMoodColor!!, 0.4f)
+        } else config.secondaryColor
+
+        // نسخة من التكوين تستخدم الألوان النشطة بدلاً من الأساسية لضمان تناسق كل الطبقات
+        val activeConfig = config.copy(
+            primaryColor = activePrimary,
+            secondaryColor = activeSecondary
+        )
+
+        // 2. حساب طاقة البيس (Bass Energy)
         val bass = if (fftData.isNotEmpty()) {
-            (fftData.take(6).average().toFloat() * config.sensitivity).coerceIn(0f, 2.0f)
+            (fftData.take(6).average().toFloat() * activeConfig.sensitivity).coerceIn(0f, 2.0f)
         } else 0f
 
-        // 2. تنفيذ "الكاميرا الديناميكية" (Dynamic Camera)
-        val cameraScale = if (config.cameraShakeEnabled) {
-            1.0f + (bass * config.cameraShakeStrength) 
+        // 3. تنفيذ "الكاميرا الديناميكية" (Dynamic Camera)
+        val cameraScale = if (activeConfig.cameraShakeEnabled) {
+            1.0f + (bass * activeConfig.cameraShakeStrength) 
         } else 1.0f
 
         scope.drawContext.canvas.save()
@@ -43,52 +58,52 @@ object VisualizerDrawers {
         scope.drawContext.canvas.scale(cameraScale, cameraScale)
         scope.drawContext.canvas.translate(-width / 2f, -height / 2f)
 
-        // --- بداية عملية الرسم الفعلية ---
+        // --- بداية عملية الرسم الفعلية باستخدام activeConfig ---
 
         // أ. الخلفية التفاعلية
-        drawBackground(scope, config, fftData)
+        drawBackground(scope, activeConfig, fftData)
 
-        // ب. رسم الطبقات (من الأسفل للأعلى)
-        for (layer in config.layers) {
+        // ب. رسم الطبقات
+        for (layer in activeConfig.layers) {
             when (layer) {
-                is VisualEffect.SpectrumBars -> drawSpectrumBarsLayer(scope, config, layer, fftData)
-                is VisualEffect.CircularSpectrum -> drawCircularSpectrumLayer(scope, config, layer, fftData, timeSeconds)
-                is VisualEffect.NeonWave -> drawNeonWaveLayer(scope, config, layer, waveformData, timeSeconds)
-                is VisualEffect.RadialRings -> drawRadialRingsLayer(scope, config, layer, fftData, timeSeconds)
-                is VisualEffect.ParticleBurst -> drawParticleBurstLayer(scope, config, layer, fftData, particles)
-                is VisualEffect.CyberGrid -> drawCyberGridLayer(scope, config, layer, fftData, timeSeconds)
-                is VisualEffect.NeonLiquidWave -> drawNeonLiquidWaveLayer(scope, config, layer, waveformData, timeSeconds)
+                is VisualEffect.SpectrumBars -> drawSpectrumBarsLayer(scope, activeConfig, layer, fftData)
+                is VisualEffect.CircularSpectrum -> drawCircularSpectrumLayer(scope, activeConfig, layer, fftData, timeSeconds)
+                is VisualEffect.NeonWave -> drawNeonWaveLayer(scope, activeConfig, layer, waveformData, timeSeconds)
+                is VisualEffect.RadialRings -> drawRadialRingsLayer(scope, activeConfig, layer, fftData, timeSeconds)
+                is VisualEffect.ParticleBurst -> drawParticleBurstLayer(scope, activeConfig, layer, fftData, particles)
+                is VisualEffect.CyberGrid -> drawCyberGridLayer(scope, activeConfig, layer, fftData, timeSeconds)
+                is VisualEffect.NeonLiquidWave -> drawNeonLiquidWaveLayer(scope, activeConfig, layer, waveformData, timeSeconds)
             }
         }
 
         // ج. تأثير الـ GLITCH التفاعلي
-        if (bass > 1.3f && config.glitchIntensity > 0f) {
-            applyGlitchEffect(scope, config, bass)
+        if (bass > 1.3f && activeConfig.glitchIntensity > 0f) {
+            applyGlitchEffect(scope, activeConfig, bass)
         }
 
         // د. طبقة الكلمات
-        if (config.showLyrics && config.lyricsSegments.isNotEmpty()) {
+        if (activeConfig.showLyrics && activeConfig.lyricsSegments.isNotEmpty()) {
             val primaryInt = android.graphics.Color.argb(
-                (config.primaryColor.alpha * 255).toInt(),
-                (config.primaryColor.red * 255).toInt(),
-                (config.primaryColor.green * 255).toInt(),
-                (config.primaryColor.blue * 255).toInt()
+                (activeConfig.primaryColor.alpha * 255).toInt(),
+                (activeConfig.primaryColor.red * 255).toInt(),
+                (activeConfig.primaryColor.green * 255).toInt(),
+                (activeConfig.primaryColor.blue * 255).toInt()
             )
             val secondaryInt = android.graphics.Color.argb(
-                (config.secondaryColor.alpha * 255).toInt(),
-                (config.secondaryColor.red * 255).toInt(),
-                (config.secondaryColor.green * 255).toInt(),
-                (config.secondaryColor.blue * 255).toInt()
+                (activeConfig.secondaryColor.alpha * 255).toInt(),
+                (activeConfig.secondaryColor.red * 255).toInt(),
+                (activeConfig.secondaryColor.green * 255).toInt(),
+                (activeConfig.secondaryColor.blue * 255).toInt()
             )
 
             val nativeCanvas = scope.drawContext.canvas.nativeCanvas
             com.example.effects.KaraokeLyricsRenderer.drawKaraokeCanvas(
                 canvas = nativeCanvas,
-                segments = config.lyricsSegments,
+                segments = activeConfig.lyricsSegments,
                 currentPositionMs = (timeSeconds * 1000f).toLong(),
                 width = width,
                 height = height,
-                style = config.karaokeStyle,
+                style = activeConfig.karaokeStyle,
                 primaryColor = primaryInt,
                 secondaryColor = secondaryInt,
                 bassEnergy = bass

@@ -106,7 +106,8 @@ data class VisualizerRenderConfig(
     // --- إضافات الإبداع السينمائي ---
     val glitchIntensity: Float = 0.5f,
     val cameraShakeEnabled: Boolean = true,
-    val cameraShakeStrength: Float = 0.03f
+    val cameraShakeStrength: Float = 0.03f,
+    val currentMoodColor: Color? = null // اللون الحالي الناتج عن تحليل الكلمات
 )
 
 data class Particle(

@@ -32,8 +32,45 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    // خريطة المشاعر: كلمات دلالية -> ألوان
+    private val MOOD_MAP = mapOf(
+        "حب" to Color(0xFFFF4D6D), "love" to Color(0xFFFF4D6D), "عشق" to Color(0xFFFF4D6D), "قلب" to Color(0xFFFF4D6D),
+        "نار" to Color(0xFFFFB300), "fire" to Color(0xFFFFB300), "حرق" to Color(0xFFFFB300), "شعلة" to Color(0xFFFFB300),
+        "ليل" to Color(0xFF1A237E), "night" to Color(0xFF1A237E), "ظلام" to Color(0xFF1A237E), "dark" to Color(0xFF1A237E),
+        "حزن" to Color(0xFF607D8B), "sad" to Color(0xFF607D8B), "دموع" to Color(0xFF607D8B), "ألم" to Color(0xFF607D8B),
+        "فرح" to Color(0xFF00E5FF), "happy" to Color(0xFF00E5FF), "سعادة" to Color(0xFF00E5FF), "بهجة" to Color(0xFF00E5FF),
+        "غضب" to Color(0xFFB71C1C), "angry" to Color(0xFFB71C1C), "صراخ" to Color(0xFFB71C1C)
+    )
+
+    init {
+        startMoodAnalyzer()
+    }
+
+    private fun startMoodAnalyzer() {
+        viewModelScope.launch {
+            combine(currentPositionMs, _currentLyricsSegments) { position, segments ->
+                position to segments
+            }.collectLatest { (position, segments) ->
+                val activeSegment = segments.find { it.startTimeMs <= position && it.endTimeMs >= position }
+                val detectedColor = activeSegment?.text?.let { text ->
+                    MOOD_MAP.entries.find { (keyword, _) -> 
+                        text.contains(keyword, ignoreCase = true) 
+                    }?.value
+                }
+                
+                // تحديث التكوين باللون الجديد إذا تغير
+                if (_renderConfig.value.currentMoodColor != detectedColor) {
+                    _renderConfig.value = _renderConfig.value.copy(currentMoodColor = detectedColor)
+                }
+            }
+        }
+    }
+
     private val app = application as VantaWaveApplication
     private val repository = app.audioRepository
     private val player = app.audioPlayer
