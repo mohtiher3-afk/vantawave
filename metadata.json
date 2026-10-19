@@ -1,0 +1,6 @@
+{
+  "name": "VantaWave",
+  "description": "A professional Android music visualizer and video creator with 5 audio-reactive modes and MP4 export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

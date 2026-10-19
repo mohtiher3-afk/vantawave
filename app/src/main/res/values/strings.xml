@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">VantaWave</string>
+    <string name="tagline">Music. Visuals. Create.</string>
+    <string name="playback_channel_name">VantaWave Playback</string>
+    <string name="playback_channel_description">Playback controls for audio visualizer</string>
+</resources>
